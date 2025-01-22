@@ -19,20 +19,27 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   }
 });
-
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
       await client.connect();
       
       const userCollection = client.db('Asset-Management-System').collection('Users')
-    
+
+    //----------user related api ----------------
       app.post('/users', async (req, res) => {
           const body = req.body;
           console.log(body);
           const result = await userCollection.insertOne(body)
           console.log(result)
           res.send(result)
+      })
+      app.get('/users', async (req, res) => {
+          const email = req.query.email
+          const result =await userCollection.find().toArray()
+          const filter = result.filter(user => user.email == email)
+          const role = filter[0].role
+          res.send({result,role});
       })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
