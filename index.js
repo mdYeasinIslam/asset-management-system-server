@@ -1,6 +1,7 @@
 require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
+const jwt =require('jsonwebtoken')
 const app = express()
 const port = process.env.PORT || 5000;
 
@@ -10,6 +11,20 @@ const uri = `mongodb+srv://${process.env.db_user}:${process.env.db_pass}@cluster
 
 app.use(cors())
 app.use(express.json())
+
+const varifyToken =async (req, res, next) => {
+  if (!req.headers.authorization) {
+    return res.status(401).send({message:"unAuthorized access"})
+  }
+  const token = req.headers.authorization?.split(' ')[1]
+  jwt.verify(token,process.env.jwt_secret, (err, decode) => {
+    if (err) {
+      return res.status(401).send({message:"unAuthorized access"})
+    }
+    req.decoded = decode
+    next()
+  })
+}
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -25,7 +40,23 @@ async function run() {
       await client.connect();
       
       const userCollection = client.db('Asset-Management-System').collection('Users')
-
+    //------------jwt---------------
+     app.post('/jwt', async (req, res) => {
+      const userInfo = req.body
+      const token = jwt.sign(userInfo,process.env.jwt_secret, { expiresIn: '1h' })
+      res.send(token)
+     })
+     const varifyAdmin = async(req,res,next) => {
+    const email = req.decoded.email
+    const query = { email: email }
+      const user = await usersCollection.findOne(query)
+      const isAdmin = user?.role === 'Admin'
+      if (!isAdmin) {
+        return res.status(403).send({message:'forbidden access'})
+      }
+      next()
+    
+   }
     //----------user related api ----------------
       app.post('/users', async (req, res) => {
           const body = req.body;
@@ -35,12 +66,13 @@ async function run() {
           res.send(result)
       })
       app.get('/users', async (req, res) => {
-          const email = req.query.email
+        const email = req.query.email
           const result =await userCollection.find().toArray()
           const filter = result.filter(user => user.email == email)
           const role = filter[0].role
           res.send({result,role});
       })
+    
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
