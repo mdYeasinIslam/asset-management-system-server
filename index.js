@@ -39,7 +39,8 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
       await client.connect();
       
-      const userCollection = client.db('Asset-Management-System').collection('Users')
+    const userCollection = client.db('Asset-Management-System').collection('Users')
+    const productCollection = client.db('Asset-Management-System').collection('Products')
     //------------jwt---------------
      app.post('/jwt', async (req, res) => {
       const userInfo = req.body
@@ -68,11 +69,17 @@ async function run() {
       app.get('/users', async (req, res) => {
         const email = req.query.email
           const result =await userCollection.find().toArray()
-          const filter = result.filter(user => user.email == email)
-          const role = filter[0].role
-          res.send({result,role});
+          const filterUser = result.filter(user => user.email == email)
+          const role = filterUser[0].role
+          res.send({result,role,userInfo:filterUser});
       })
-    
+    //-------------Product related api -------------
+    app.post('/products', async (req, res) => {
+      const body = req.body;
+      console.log(body)
+      const result = await productCollection.insertOne(body)
+      res.send(result)
+    })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
