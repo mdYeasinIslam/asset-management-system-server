@@ -61,9 +61,7 @@ async function run() {
     //----------user related api ----------------
       app.post('/users', async (req, res) => {
           const body = req.body;
-          console.log(body);
           const result = await userCollection.insertOne(body)
-          console.log(result)
           res.send(result)
       })
       app.get('/users', async (req, res) => {
@@ -73,11 +71,14 @@ async function run() {
           const role = filterUser[0].role
           res.send({result,role,userInfo:filterUser});
       })
-    //-------------Product related api -------------
-    app.post('/products', async (req, res) => {
+    //-------------Assets related api -------------
+    app.post('/assets', async (req, res) => {
       const body = req.body;
-      console.log(body)
       const result = await productCollection.insertOne(body)
+      res.send(result)
+    })
+    app.get('/assets', async (req, res) => {
+      const result = await productCollection.find().toArray()
       res.send(result)
     })
     // Send a ping to confirm a successful connection
