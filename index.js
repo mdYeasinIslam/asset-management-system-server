@@ -5,7 +5,7 @@ const jwt =require('jsonwebtoken')
 const app = express()
 const port = process.env.PORT || 5000;
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.db_user}:${process.env.db_pass}@cluster0.bfv30pl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 
@@ -80,6 +80,30 @@ async function run() {
     app.get('/assets', async (req, res) => {
       const result = await productCollection.find().toArray()
       res.send(result)
+    })
+    app.delete('/assets/:id', async (req, res) => {
+      const id = req.params.id
+      console.log(id)
+      const filter = {_id:new ObjectId(id)}
+      const findAssets = await productCollection.deleteOne(filter)
+      res.send(findAssets)
+    })
+    app.put('/assets/:id',async(req,res)=>{
+      const id = req.params.id
+      const info = req.body;
+      console.log(id, info)
+      const filter ={_id:new ObjectId(id)}
+      const doc = {
+        $set: {
+          name:info.name,
+          type:info.type,
+          quantity:info.quantity,
+          date: info.date,
+          status:info.status
+        }
+      }
+      const update = await productCollection.updateOne(filter, doc)
+      res.send(update)
     })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
