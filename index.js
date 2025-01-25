@@ -13,6 +13,7 @@ app.use(cors())
 app.use(express.json())
 
 const varifyToken = async (req, res, next) => {
+  console.log(req.headers.authorization)
   if (!req.headers.authorization) {
     return res.status(401).send({message:"unAuthorized access"})
   }
@@ -101,7 +102,9 @@ async function run() {
     })
     app.get('/assets', varifyToken, async (req, res) => {
       const isPublic = req.query.public;
+      console.log(isPublic)
       if (isPublic == undefined) {
+        console.log('inside')
         //------------check actual admin------------------
          const decodeEmail = req.decoded.email
          const findUser = { hr_email: decodeEmail }
@@ -109,7 +112,7 @@ async function run() {
 
          //--------filter for search----------------------------
          const name = req.query.name
-         const availability = req.query.availabilty
+        const availability = req.query.availabilty
          // const filter = { "name": { $regex: name, $options: 'i' } }
          const filter = {
            $and: [
@@ -118,14 +121,16 @@ async function run() {
            ]
          };
          //filter base on search (name)
-         if (name?.length > 0) {
+        if (name?.length > 0) {
+           console.log(name)
            const filterAssets = await productCollection.find(filter).toArray()
+           console.log(filterAssets)
            if (!filterAssets.length) {
              return res.status(404).send({message:'There is no assets according to your search.Please serach with correct name'})
            }
           //  if (!filterAssets.length) {
           //    return res.status(404).send({message:'There is no assets according to your search.Please serach with correct name'})
-          //  }
+           //  }
            return res.send(filterAssets)
          }
          //filter base on availability :(available or out-of-stock)
