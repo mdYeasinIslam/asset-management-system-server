@@ -71,15 +71,53 @@ async function run() {
           const role = filterUser[0].role
           res.send({result,role,userInfo:filterUser});
       })
-    //-------------Assets related api -------------
+    //-------------Assets related api Hr manager-------------
     app.post('/assets', async (req, res) => {
       const body = req.body;
       const result = await productCollection.insertOne(body)
       res.send(result)
     })
     app.get('/assets', async (req, res) => {
-      const result = await productCollection.find().toArray()
-      res.send(result)
+      const name = req.query.name;
+      const availability = req.query.availabilty
+      const filter = { "name": { $regex: name, $options: 'i' } }
+      //filter base on search (name)
+      if (name) {
+        const filterAssets = await productCollection.find(filter).toArray()
+        if (!filterAssets.length) {
+          return res.status(404).send({message:'There is no assets according to your search.Please serach with correct name'})
+        }
+        // return res.send(filterAssets)
+        if (!filterAssets.length) {
+          return res.status(404).send({message:'There is no assets according to your search.Please serach with correct name'})
+        }
+        return res.send(filterAssets)
+      }
+      //filter base on availability :(available or out-of-stock)
+      else if (availability) {
+        
+        console.log(availability)
+        const filterAssets = await productCollection.find().toArray()
+        if (availability =='available') {
+          const filterBaseOnQuantity = filterAssets.filter(asset => asset.quantity > 0);
+          console.log(filterBaseOnQuantity)
+          return res.send(filterBaseOnQuantity)
+        }
+        if (availability == 'outOfStock') {
+          const filterBaseOnQuantity = filterAssets.filter(asset => asset.quantity == 0);
+             console.log(filterBaseOnQuantity)
+            return res.send(filterBaseOnQuantity)
+        }
+        // if (!filterAssets.length) {
+        //   return res.status(404).send({message:'There is no assets according to your search.Please serach with correct name'})
+        // }
+        // return res.send(filterAssets)
+      }
+        
+      else {
+        const result = await productCollection.find().toArray()
+        res.send(result)
+      }
     })
     app.delete('/assets/:id', async (req, res) => {
       const id = req.params.id
@@ -105,6 +143,8 @@ async function run() {
       const update = await productCollection.updateOne(filter, doc)
       res.send(update)
     })
+
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
