@@ -5,6 +5,7 @@ const jwt =require('jsonwebtoken')
 const app = express()
 const port = process.env.PORT || 5000;
 
+
 const { MongoClient, ServerApiVersion, ObjectId, Decimal128 } = require('mongodb');
 const uri = `mongodb+srv://${process.env.db_user}:${process.env.db_pass}@cluster0.bfv30pl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -43,6 +44,7 @@ async function run() {
     const userCollection = client.db('Asset-Management-System').collection('Users')
     const productCollection = client.db('Asset-Management-System').collection('Products')
     const assetRequestCollection = database.collection('Request_for_asset')
+
     //------------jwt---------------
      app.post('/jwt', async (req, res) => {
       const userInfo = req.body
@@ -58,9 +60,8 @@ async function run() {
         return res.status(403).send({message:'forbidden access'})
       }
       next()
-    
      }
-    //get single user and check is the "Admini" or no via variafytoke midlewire
+    //get single user and check is the "Admin" or not, via variafytoke midlewire
     app.get('/users/admin/:email',varifyToken, async (req, res) => {
       const email = req.params.email
         
@@ -86,24 +87,30 @@ async function run() {
           res.send(result)
       })
       app.get('/users', async (req, res) => {
-        const email = req.query.email
-          const result =await userCollection.find().toArray()
+        const email = req.query?.email
+        const result = await userCollection.find().toArray()
         const filterUser = result.filter(user => user.email == email)
-          const role = filterUser[0]?.role
-          res.send({result,role,userInfo:filterUser});
+        const filterEmployee = result.filter(user => user.role == 'Employee')
+        const role = filterUser[0]?.role
+        res.send({result,role,userInfo:filterUser,employee:filterEmployee});
         
       })
+    
     //-------------Assets related api Hr manager-------------
     app.post('/assets', async (req, res) => {
       const body = req.body;
-      const result = await productCollection.insertOne(body)
-      res.send(result)
+      console.log(body.name)
+      const filter = { name: body.name }
+      const findAssets = await productCollection.findOne(filter)
+      if (findAssets == null) {
+        const result = await productCollection.insertOne(body)
+      return  res.send(result)
+      }
+      res.send({message:'This product is already exist in your asset list'})
     })
     app.get('/assets', varifyToken, async (req, res) => {
       const isPublic = req.query.public;
-      console.log(isPublic)
       if (isPublic == undefined) {
-        console.log('inside')
         //------------check actual admin------------------
          const decodeEmail = req.decoded.email
          const findUser = { hr_email: decodeEmail }
@@ -121,9 +128,7 @@ async function run() {
          };
          //filter base on search (name)
         if (name?.length > 0) {
-           console.log(name)
            const filterAssets = await productCollection.find(filter).toArray()
-           console.log(filterAssets)
            if (!filterAssets.length) {
              return res.status(404).send({message:'There is no assets according to your search.Please serach with correct name'})
            }
@@ -187,10 +192,8 @@ async function run() {
          }
     })
 
-
     app.delete('/assets/:id',varifyToken, async (req, res) => {
       const id = req.params.id
-      console.log(id)
       const filter = {_id:new ObjectId(id)}
       const findAssets = await productCollection.deleteOne(filter)
       res.send(findAssets)
@@ -215,30 +218,50 @@ async function run() {
     // ----------------------employee: asset request and save it to the DB--------------------
     app.post('/employee/assetRequest',varifyToken, async (req, res) => {
       const reqInfo = req.body;
-      const result = await assetRequestCollection.insertOne(reqInfo);
+      const email = req.query.email
+      // console.log(email,reqInfo)
+      const filterEmail= {requesterEmail:email}
+      const filter = { assetName: reqInfo.assetName }
+      const findAsset = await assetRequestCollection.find(filterEmail).toArray()
+      const checkAssetAvailability = findAsset.filter(asset => asset.assetName == reqInfo.assetName)
+      if (!checkAssetAvailability) {
+        const result = await assetRequestCollection.insertOne(reqInfo);
       res.send(result)
+      }
+      res.send({message:"You are already send the request for this asset",success:false})
+      
     })
     app.get('/employee/assetRequest', async (req, res) => {
+      const email = req.query?.email
+      const filter ={requesterEmail:email}
+      if (email) {
+        const result = await assetRequestCollection.find(filter).toArray()
+       return res.send(result)
+      }
       const result = await assetRequestCollection.find().toArray()
-      console.log(result)
       res.send(result)
     })
-    app.patch('/employee/assetRequest/:id', async (req, res) => {
+    app.put('/employee/assetRequest/:id', async (req, res) => {
       const id = req.params.id;
       const body =req.body
-      console.log(id,body)
-      const filter = { _id:new ObjectId(id) }
+      const filter = { _id: new ObjectId(id) }
+      const options = {upsert:true}
       const updateDoc = {
         $set: {
-          status:body.value
+          status: body.value,
+          updateDate:body.updateDate
         }
       }
-      const update = await assetRequestCollection.updateOne(filter, updateDoc)
+      const update = await assetRequestCollection.updateOne(filter, updateDoc,options)
       res.send({update,value:body.value})
     })
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    app.delete('/employee/assetRequest/:id', async (req, res) => {
+      const id = req.params.id;
+      console.log(id)
+      const filter = { _id: new ObjectId(id) }
+      const deleteItems = await assetRequestCollection.deleteOne(filter)
+      res.send(deleteItems)
+    })
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
