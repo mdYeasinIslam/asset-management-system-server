@@ -13,7 +13,6 @@ app.use(cors())
 app.use(express.json())
 
 const varifyToken = async (req, res, next) => {
-  console.log(req.headers.authorization)
   if (!req.headers.authorization) {
     return res.status(401).send({message:"unAuthorized access"})
   }
@@ -221,7 +220,21 @@ async function run() {
     })
     app.get('/employee/assetRequest', async (req, res) => {
       const result = await assetRequestCollection.find().toArray()
+      console.log(result)
       res.send(result)
+    })
+    app.patch('/employee/assetRequest/:id', async (req, res) => {
+      const id = req.params.id;
+      const body =req.body
+      console.log(id,body)
+      const filter = { _id:new ObjectId(id) }
+      const updateDoc = {
+        $set: {
+          status:body.value
+        }
+      }
+      const update = await assetRequestCollection.updateOne(filter, updateDoc)
+      res.send({update,value:body.value})
     })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
