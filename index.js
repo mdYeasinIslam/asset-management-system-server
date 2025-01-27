@@ -44,7 +44,7 @@ async function run() {
     const userCollection = client.db('Asset-Management-System').collection('Users')
     const productCollection = client.db('Asset-Management-System').collection('Products')
     const assetRequestCollection = database.collection('Request_for_asset')
-
+    const employeeCollection = database.collection('Employees-Data')
     //------------jwt---------------
      app.post('/jwt', async (req, res) => {
       const userInfo = req.body
@@ -70,7 +70,6 @@ async function run() {
       }
       const filter = { email: email }
       const findUser = await userCollection.findOne(filter)
-      console.log(findUser)
       let admin = false
 
       if (findUser && findUser.role == 'Admin') {
@@ -99,7 +98,6 @@ async function run() {
     //-------------Assets related api Hr manager-------------
     app.post('/assets', async (req, res) => {
       const body = req.body;
-      console.log(body.name)
       const filter = { name: body.name }
       const findAssets = await productCollection.findOne(filter)
       if (findAssets == null) {
@@ -219,14 +217,14 @@ async function run() {
     app.post('/employee/assetRequest',varifyToken, async (req, res) => {
       const reqInfo = req.body;
       const email = req.query.email
-      // console.log(email,reqInfo)
       const filterEmail= {requesterEmail:email}
-      const filter = { assetName: reqInfo.assetName }
+      // const filter = { assetName: reqInfo.assetName }
       const findAsset = await assetRequestCollection.find(filterEmail).toArray()
-      const checkAssetAvailability = findAsset.filter(asset => asset.assetName == reqInfo.assetName)
-      if (!checkAssetAvailability) {
+      const checkAssetAvailability = findAsset.filter(asset => asset.assetName.toLowerCase() == reqInfo.assetName.toLowerCase())
+
+      if(checkAssetAvailability.length==0) {
         const result = await assetRequestCollection.insertOne(reqInfo);
-      res.send(result)
+       return res.send(result)
       }
       res.send({message:"You are already send the request for this asset",success:false})
       
@@ -241,6 +239,7 @@ async function run() {
       const result = await assetRequestCollection.find().toArray()
       res.send(result)
     })
+    //Hr update the request status (approved or reject)
     app.put('/employee/assetRequest/:id', async (req, res) => {
       const id = req.params.id;
       const body =req.body
@@ -249,7 +248,9 @@ async function run() {
       const updateDoc = {
         $set: {
           status: body.value,
-          updateDate:body.updateDate
+          updateDate: body.updateDate,
+          companyName: body.companyName,
+          company_logo:body.companyLogo
         }
       }
       const update = await assetRequestCollection.updateOne(filter, updateDoc,options)
@@ -257,11 +258,84 @@ async function run() {
     })
     app.delete('/employee/assetRequest/:id', async (req, res) => {
       const id = req.params.id;
-      console.log(id)
       const filter = { _id: new ObjectId(id) }
       const deleteItems = await assetRequestCollection.deleteOne(filter)
       res.send(deleteItems)
     })
+    //employee updation (approved item can status change: if ruturnable then change status:return)
+    app.patch('/employee/assetRequest/:id', async (req, res) => {
+      const id = req.params.id;
+      const body = req.body
+      const filter = { _id: new ObjectId(id) }
+      const updateDoc = {
+        $set: {
+          assetStatus: body.value
+        }
+      }
+      const result = await assetRequestCollection.updateOne(filter, updateDoc)
+      res.send(result)
+    })
+
+    // ----------------------------------------Hr Add employee api----------------
+    app.post('/hr/addEmployee', async (req, res) => {
+      const employee = req.body;
+console.log(employee)
+      const filter = { email: employee.email }
+      const findDuplicate = await employeeCollection.findOne(filter) //find same employee from employee collection
+
+       
+      const filterHr = { email: employee.hrEmail }
+      const findHr = await userCollection.findOne(filterHr) ///find hr package limit
+      const packageLimit = findHr?.package?.split('_')[0]
+
+      const hrTotalEmployee = { hrEmail: employee.hrEmail }
+      const TotalEmployee=await employeeCollection.find(hrTotalEmployee).toArray() //check how much employee add by a hr
+     
+      if (findDuplicate == null) {
+        console.log(packageLimit)
+        if (TotalEmployee.length >= packageLimit) {
+          console.log('inside')
+          return res.send({status:false,message:`Package limit over!!  your can add ${packageLimit} employee only. `})
+        }
+        const result = await employeeCollection.insertOne(employee)
+        return res.send(result)
+      }
+      res.send({message:'This employee is arealy in your team',status:false})
+    })    
+    app.post('/hr/addEmployee/array', async (req, res) => {
+      const employeeArray = req.body;
+      // console.log(employeeArray)
+      let newEmployee = [];
+      for (const employee of employeeArray) {
+        const findExist = await employeeCollection.findOne({email:employee.email})
+        if (!findExist) {
+          if (employee._id) {
+            const removeId = Object.assign({}, { employeeId: employee._id, ...employee })
+            delete removeId._id
+            newEmployee.push(removeId)
+          }
+        }
+      }
+      
+      if (newEmployee.length > 0) {
+        const result = await employeeCollection.insertMany(newEmployee)
+       return res.send(result)
+      }
+      res.send({status:false,message:"All member are already in your team"})
+    })
+
+
+    app.get('/hr/addEmployee', async (req, res) => {
+      const result = await employeeCollection.find().toArray()
+      res.send(result)
+  })
+    app.delete('/hr/addEmployee/:id', async (req, res) => {
+      const id = req.params.id
+      const filter = { _id: new ObjectId(id) }
+      const result = await employeeCollection.deleteOne(filter)
+      res.send(result)
+  })
+
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
