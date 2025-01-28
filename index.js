@@ -10,7 +10,12 @@ const { MongoClient, ServerApiVersion, ObjectId, Decimal128 } = require('mongodb
 const uri = `mongodb+srv://${process.env.db_user}:${process.env.db_pass}@cluster0.bfv30pl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 
-app.use(cors())
+app.use(cors({
+  origin: [
+    "https://coruscating-lebkuchen-a1fe95.netlify.app",
+    "http://localhost:5173"
+  ]
+}))
 app.use(express.json())
 
 const varifyToken = async (req, res, next) => {
@@ -39,7 +44,8 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-      await client.connect();
+    await client.connect();
+    console.log('conneted')
       const database= client.db('Asset-Management-System')
     const userCollection = client.db('Asset-Management-System').collection('Users')
     const productCollection = client.db('Asset-Management-System').collection('Products')
@@ -279,7 +285,7 @@ async function run() {
     // ----------------------------------------Hr Add employee api----------------
     app.post('/hr/addEmployee', async (req, res) => {
       const employee = req.body;
-console.log(employee)
+
       const filter = { email: employee.email }
       const findDuplicate = await employeeCollection.findOne(filter) //find same employee from employee collection
 
@@ -292,9 +298,9 @@ console.log(employee)
       const TotalEmployee=await employeeCollection.find(hrTotalEmployee).toArray() //check how much employee add by a hr
      
       if (findDuplicate == null) {
-        console.log(packageLimit)
+        
         if (TotalEmployee.length >= packageLimit) {
-          console.log('inside')
+         
           return res.send({status:false,message:`Package limit over!!  your can add ${packageLimit} employee only. `})
         }
         const result = await employeeCollection.insertOne(employee)
@@ -304,7 +310,7 @@ console.log(employee)
     })    
     app.post('/hr/addEmployee/array', async (req, res) => {
       const employeeArray = req.body;
-      // console.log(employeeArray)
+      
       let newEmployee = [];
       for (const employee of employeeArray) {
         const findExist = await employeeCollection.findOne({email:employee.email})
