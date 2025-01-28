@@ -45,8 +45,8 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
-    console.log('conneted')
+    // await client.connect();
+    // console.log('conneted')
       const database= client.db('Asset-Management-System')
     const userCollection = client.db('Asset-Management-System').collection('Users')
     const productCollection = client.db('Asset-Management-System').collection('Products')
@@ -97,7 +97,7 @@ async function run() {
       app.get('/users', async (req, res) => {
         const email = req.query?.email
         const result = await userCollection.find().toArray()
-      console.log(email,result)
+      // console.log(email,result)
           const filterUser = result.filter(user => user.email == email)
         const filterEmployee = result.filter(user => user.role == 'Employee')
         const role = filterUser[0]?.role
