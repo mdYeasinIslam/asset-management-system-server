@@ -23,7 +23,8 @@ const varifyToken = async (req, res, next) => {
     return res.status(401).send({message:"unAuthorized access"})
   }
   const token = req.headers.authorization?.split(' ')[1]
-  jwt.verify(token,process.env.jwt_secret, (err, decode) => {
+  // process.env.jwt_secret
+  jwt.verify(token,'hasan1234', (err, decode) => {
     if (err) {
       console.log(err)
       return res.status(401).send({message:"unAuthorized access"})
@@ -54,9 +55,11 @@ async function run() {
     //------------jwt---------------
      app.post('/jwt', async (req, res) => {
       const userInfo = req.body
-      const token = jwt.sign(userInfo,process.env.jwt_secret, { expiresIn: '1h' })
+      const token = jwt.sign(userInfo,'hasan1234',{ expiresIn: '1h' })
       res.send(token)
      })
+    // process.env.jwt_secret
+    
      const varifyAdmin = async(req,res,next) => {
     const email = req.decoded.email
     const query = { email: email }
@@ -94,7 +97,8 @@ async function run() {
       app.get('/users', async (req, res) => {
         const email = req.query?.email
         const result = await userCollection.find().toArray()
-        const filterUser = result.filter(user => user.email == email)
+      console.log(email,result)
+          const filterUser = result.filter(user => user.email == email)
         const filterEmployee = result.filter(user => user.role == 'Employee')
         const role = filterUser[0]?.role
         res.send({result,role,userInfo:filterUser,employee:filterEmployee});
