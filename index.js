@@ -336,7 +336,19 @@ async function run() {
 
       const filter = { email: employee.email };
       const findDuplicate = await employeeCollection.findOne(filter); //find same employee from employee collection
+      const updateDoc = {
+        $set: {
+          canRequestForAsset: employee?.havePermission,
+        },
+      };
+      const options = { upsert: true };
 
+      const updatePermission = await userCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      console.log(updatePermission);
       const filterHr = { email: employee.hrEmail };
       const findHr = await userCollection.findOne(filterHr); ///find hr package limit
       const packageLimit = findHr?.package?.split("_")[0];
@@ -354,10 +366,10 @@ async function run() {
           });
         }
         const result = await employeeCollection.insertOne(employee);
-        return res.send(result);
+        return res.send(result, updatePermission);
       }
       res.send({
-        message: "This employee is arealy in your team",
+        message: "This employee is already in your team",
         status: false,
       });
     });
