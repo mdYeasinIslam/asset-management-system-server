@@ -18,7 +18,7 @@ app.use(
     origin: [
       "https://coruscating-lebkuchen-a1fe95.netlify.app",
       "http://localhost:5173",
-      "https://assetpulse.vercel.app/",
+      "https://assetpulse.vercel.app",
     ],
   })
 );
