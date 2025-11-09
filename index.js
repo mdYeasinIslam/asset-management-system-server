@@ -17,6 +17,7 @@ app.use(
   cors({
     origin: [
       "https://coruscating-lebkuchen-a1fe95.netlify.app",
+      'https://asset-pulse-system.netlify.app',
       "http://localhost:5173",
       "https://assetpulse.vercel.app",
     ],
